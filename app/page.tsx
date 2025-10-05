@@ -1,13 +1,13 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { HomepageNav } from "@/components/homepage-nav"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Activity, BarChart3, Bell, Lock, Zap, Globe, ArrowRight, CheckCircle2 } from "lucide-react"
-import Image from "next/image"
-import { useEffect, useState } from "react"
-import Link from "next/link"
+import type React from 'react'
+import { HomepageNav } from '@/components/homepage-nav'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Activity, BarChart3, Bell, Lock, Zap, Globe, ArrowRight, CheckCircle2 } from 'lucide-react'
+import Image from 'next/image'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 export default function HomePage() {
   const [scrollY, setScrollY] = useState(0)
@@ -15,8 +15,8 @@ export default function HomePage() {
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
@@ -37,7 +37,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/80 to-background" />
           <div
             className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-primary/5 animate-pulse"
-            style={{ animationDuration: "8s" }}
+            style={{ animationDuration: '8s' }}
           />
         </div>
 
@@ -45,14 +45,15 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center max-w-4xl mx-auto space-y-8 animate-fade-in-up">
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-balance leading-tight">
-              Monitoramento IoT <span className="text-primary bg-clip-text">inteligente</span> para sua indústria
+              Monitoramento IoT <span className="text-primary bg-clip-text">inteligente</span> para
+              sua indústria
             </h1>
             <p className="text-xl sm:text-2xl text-muted-foreground text-balance leading-relaxed max-w-3xl mx-auto">
-              Conecte, monitore e otimize seus dispositivos industriais em tempo real. Uma plataforma completa para
-              transformar dados em decisões.
+              Conecte, monitore e otimize seus dispositivos industriais em tempo real. Uma
+              plataforma completa para transformar dados em decisões.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <Link href="/monitoramento">
+              <Link href="/maquinas-monitoramento">
                 <Button size="lg" className="rounded-full text-base px-8 h-12 group">
                   Acessar plataforma
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -61,7 +62,7 @@ export default function HomePage() {
             </div>
             <div
               className="flex items-center justify-center gap-6 pt-8 text-sm text-muted-foreground animate-fade-in"
-              style={{ animationDelay: "0.3s" }}
+              style={{ animationDelay: '0.3s' }}
             >
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -163,7 +164,7 @@ export default function HomePage() {
             Junte-se a empresas que já confiam na IoTurn para monitorar sua infraestrutura
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link href="/monitoramento">
+            <Link href="/maquinas-monitoramento">
               <Button size="lg" className="rounded-full text-base px-8 h-12 group">
                 Acessar plataforma
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -186,7 +187,9 @@ export default function HomePage() {
                 className="h-6 w-auto dark:brightness-100 brightness-0 dark:invert-0 invert transition-all duration-300"
               />
             </div>
-            <p className="text-sm text-muted-foreground">© 2025 IoTurn. Plataforma de Monitoramento Industrial.</p>
+            <p className="text-sm text-muted-foreground">
+              © 2025 IoTurn. Plataforma de Monitoramento Industrial.
+            </p>
           </div>
         </div>
       </footer>
@@ -214,14 +217,18 @@ function FeatureCard({
   return (
     <Card
       className={`p-6 transition-all duration-300 border-border/50 bg-card cursor-pointer group
-        ${isActive ? "shadow-xl scale-105 border-primary/50" : "hover:shadow-lg hover:scale-102"}`}
+        ${isActive ? 'shadow-xl scale-105 border-primary/50' : 'hover:shadow-lg hover:scale-102'}`}
       onMouseEnter={() => setActiveFeature(index)}
       onMouseLeave={() => setActiveFeature(null)}
     >
       <div className="flex flex-col gap-4">
         <div
           className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300
-          ${isActive ? "bg-primary text-primary-foreground scale-110" : "bg-primary/10 text-primary group-hover:bg-primary/20"}`}
+          ${
+            isActive
+              ? 'bg-primary text-primary-foreground scale-110'
+              : 'bg-primary/10 text-primary group-hover:bg-primary/20'
+          }`}
         >
           {icon}
         </div>
@@ -248,14 +255,14 @@ function StatCard({ number, suffix, label }: { number: string; suffix: string; l
 
 function PartnerLogoCarousel() {
   const partners = [
-    { name: "TechCorp", logo: "/tech-company-logo.jpg" },
-    { name: "IndustrialPro", logo: "/industrial-logo.png" },
-    { name: "SmartFactory", logo: "/smart-factory-logo.jpg" },
-    { name: "IoT Solutions", logo: "/iot-solutions-logo.jpg" },
-    { name: "DataFlow", logo: "/data-analytics-logo.jpg" },
-    { name: "AutomateX", logo: "/automation-company-logo.jpg" },
-    { name: "CloudSync", logo: "/cloud-services-logo.jpg" },
-    { name: "ConnectHub", logo: "/connectivity-platform-logo.jpg" },
+    { name: 'TechCorp', logo: '/tech-company-logo.jpg' },
+    { name: 'IndustrialPro', logo: '/industrial-logo.png' },
+    { name: 'SmartFactory', logo: '/smart-factory-logo.jpg' },
+    { name: 'IoT Solutions', logo: '/iot-solutions-logo.jpg' },
+    { name: 'DataFlow', logo: '/data-analytics-logo.jpg' },
+    { name: 'AutomateX', logo: '/automation-company-logo.jpg' },
+    { name: 'CloudSync', logo: '/cloud-services-logo.jpg' },
+    { name: 'ConnectHub', logo: '/connectivity-platform-logo.jpg' },
   ]
 
   // Duplicate the array for seamless infinite loop
@@ -275,7 +282,7 @@ function PartnerLogoCarousel() {
             className="flex-shrink-0 flex items-center justify-center h-16 w-36 grayscale hover:grayscale-0 opacity-60 hover:opacity-100 transition-all duration-300"
           >
             <Image
-              src={partner.logo || "/placeholder.svg"}
+              src={partner.logo || '/placeholder.svg'}
               alt={`${partner.name} logo`}
               width={140}
               height={60}
