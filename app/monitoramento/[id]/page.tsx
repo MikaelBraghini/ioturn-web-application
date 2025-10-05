@@ -36,16 +36,6 @@ import {
 import axios from 'axios'
 import { getMachineData } from '@/app/api/monitoramento/monitoramento-service'
 
-const generateMockData = (baseValue: number, variance: number, points = 20) => {
-  return Array.from({ length: points }, (_, i) => ({
-    time: `${String(14 + Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(
-      2,
-      '0'
-    )}`,
-    value: baseValue + (Math.random() - 0.5) * variance,
-  }))
-}
-
 const calculateStats = (data: { time: string; value: number }[]) => {
   const values = data.map((d) => d.value)
   return {
@@ -100,19 +90,6 @@ export default function MachineMonitoringPage() {
 
     return () => clearInterval(interval)
   }, [machineId, timeRange])
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    setMachineData({
-      rpm: generateMockData(1500, 200),
-      temperature: generateMockData(75, 15),
-      oilLevel: generateMockData(85, 10),
-      current: generateMockData(12, 3),
-    })
-    setLastUpdate(new Date())
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    setIsRefreshing(false)
-  }
 
   if (!machineId) {
     return (
