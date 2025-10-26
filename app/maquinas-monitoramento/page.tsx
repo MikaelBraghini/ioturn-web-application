@@ -1,16 +1,25 @@
-"use client"
+'use client'
 
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity, Gauge, Thermometer, Droplet, Zap, ArrowRight, Loader2, AlertTriangle } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Activity,
+  Gauge,
+  Thermometer,
+  Droplet,
+  Zap,
+  ArrowRight,
+  Loader2,
+  AlertTriangle,
+  Inbox,
+} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import {
+  getMachineList,
+  type Machine,
+} from '@/app/api/monitoramento-maquina/monitoramento-maquina-service'
 
-// 1. Ajuste o caminho para o seu serviço, se necessário
-import { getMachineList, type Machine } from "@/app/api/monitoramento-maquina/monitoramento-maquina-service"
-
-// 2. O tipo 'MachineStatus' agora é baseado nos dados reais da API
-type MachineStatus = Machine['status'] // "ACTIVE" | "CANCELED" | "SUSPENDED"
-// O tipo 'SensorStatus' foi removido, pois não existe mais na API
+type MachineStatus = Machine['status']
 
 export default function MachineMonitoringSelectionPage() {
   const router = useRouter()
@@ -30,7 +39,7 @@ export default function MachineMonitoringSelectionPage() {
         if (err instanceof Error) {
           setError(err.message)
         } else {
-          setError("Ocorreu um erro desconhecido.")
+          setError('Ocorreu um erro desconhecido.')
         }
       } finally {
         setIsLoading(false)
@@ -40,27 +49,21 @@ export default function MachineMonitoringSelectionPage() {
     loadMachines()
   }, [])
 
-  // 3. LÓGICA ATUALIZADA para 'traduzir' o status da API para cores
   const getStatusColor = (status: MachineStatus) => {
     switch (status) {
-      case "ACTIVE":
-        return "bg-emerald-500" // Online
-      case "CANCELED":
-      case "SUSPENDED":
+      case 'ACTIVE':
+        return 'bg-emerald-500'
+      case 'CANCELED':
+      case 'SUSPENDED':
       default:
-        return "bg-red-500" // Offline
+        return 'bg-red-500'
     }
   }
 
-  // 4. NOVA FUNÇÃO: Gera uma cor para o 'pin' da máquina
   const getMachineColor = (status: MachineStatus) => {
-    return status === "ACTIVE" ? "#3b82f6" : "#f59e0b" // Azul para Ativo, Laranja para outros
+    return status === 'ACTIVE' ? '#3b82f6' : '#f59e0b'
   }
 
-  // 5. 'getSensorStatusColor' foi REMOVIDA
-
-  // --- Renderização Condicional (Carregando e Erro) ---
-  // (Nenhuma alteração aqui)
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -84,11 +87,9 @@ export default function MachineMonitoringSelectionPage() {
     )
   }
 
-  // --- Renderização Principal (COM CAMPOS ATUALIZADOS) ---
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        {/* ...header sem alteração... */}
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
@@ -103,85 +104,97 @@ export default function MachineMonitoringSelectionPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* 6. AQUI COMEÇAM AS MUDANÇAS DE DADOS */}
-          {machines.map((machine) => (
-            <Card
-              key={machine.id}
-              className="border-border hover:border-primary/50 transition-all cursor-pointer group hover:shadow-lg"
-              onClick={() => router.push(`/monitoramento/${machine.id}`)}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {/* Usa a nova função de cor */}
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getMachineColor(machine.status) }} />
-                    {/* Usa a função de status atualizada */}
-                    <div className={`w-2 h-2 rounded-full ${getStatusColor(machine.status)} animate-pulse`} />
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                </div>
-                <CardTitle className="text-lg">{machine.name}</CardTitle>
-                <CardDescription className="space-y-1">
-                  {/* Atualizado de 'deviceId' para 'device' */}
-                  <p className="font-mono text-xs">{machine.device}</p>
-                  {/* 'client' já estava correto no seu service */}
-                  <p className="text-xs">{machine.client}</p>
-                  {/* 'lastUpdate' não existe mais, mostramos o Status */}
-                  <p className="text-xs text-muted-foreground uppercase">{machine.status}</p>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* --- RPM --- */}
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <Gauge className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">RPM</span>
+        {/* ✅ BLOCO NOVO: mensagem amigável quando não há máquinas */}
+        {machines.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center py-20">
+            <div className="p-4 bg-muted rounded-full mb-4">
+              <Inbox className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground mb-1">
+              Nenhuma máquina cadastrada
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Parece que ainda não há nenhuma máquina registrada no sistema. Adicione uma nova
+              máquina para começar o monitoramento.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {machines.map((machine) => (
+              <Card
+                key={machine.id}
+                className="border-border hover:border-primary/50 transition-all cursor-pointer group hover:shadow-lg"
+                onClick={() => router.push(`/monitoramento/${machine.id}`)}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: getMachineColor(machine.status) }}
+                      />
+                      <div
+                        className={`w-2 h-2 rounded-full ${getStatusColor(
+                          machine.status
+                        )} animate-pulse`}
+                      />
                     </div>
-                    {/* Classe de cor removida, valor atualizado */}
-                    <p className="text-sm font-mono font-semibold text-foreground">
-                      {machine.lastRpm ? `${machine.lastRpm} A` : '---'}
-                    </p>
+                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                   </div>
-                  {/* --- Temperatura --- */}
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <Thermometer className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Temp</span>
+                  <CardTitle className="text-lg">{machine.name}</CardTitle>
+                  <CardDescription className="space-y-1">
+                    <p className="font-mono text-xs">{machine.device}</p>
+                    <p className="text-xs">{machine.client}</p>
+                    <p className="text-xs text-muted-foreground uppercase">{machine.status}</p>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Gauge className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">RPM</span>
+                      </div>
+                      <p className="text-sm font-mono font-semibold text-foreground">
+                        {machine.lastRpm ? `${machine.lastRpm} A` : '---'}
+                      </p>
                     </div>
-                    {/* Classe de cor removida, valor atualizado */}
-                    <p className="text-sm font-mono font-semibold text-foreground">
-                      {machine.lastOilTemperature ? `${machine.lastOilTemperature} °C` : '---'}
-                    </p>
-                  </div>
-                  {/* --- Nível de Óleo --- */}
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <Droplet className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Óleo</span>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Thermometer className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Temp</span>
+                      </div>
+                      <p className="text-sm font-mono font-semibold text-foreground">
+                        {machine.lastOilTemperature ? `${machine.lastOilTemperature} °C` : '---'}
+                      </p>
                     </div>
-                    {/* Classe de cor removida, valor atualizado */}
-                    <p className="text-sm font-mono font-semibold text-foreground">
-                      {machine.lastOilLevel ? `${machine.lastOilLevel} %` : '---'}
-                    </p>
-                  </div>
-                  {/* --- Corrente --- */}
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Corrente</span>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Droplet className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Óleo</span>
+                      </div>
+                      <p className="text-sm font-mono font-semibold text-foreground">
+                        {machine.lastOilLevel ? `${machine.lastOilLevel} %` : '---'}
+                      </p>
                     </div>
-                    {/* Classe de cor removida, valor atualizado */}
-                    <p className="text-sm font-mono font-semibold text-foreground">
-                      {machine.lastCurrent ? `${machine.lastCurrent} A` : '---'}
-                    </p>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Corrente</span>
+                      </div>
+                      <p className="text-sm font-mono font-semibold text-foreground">
+                        {machine.lastCurrent ? `${machine.lastCurrent} A` : '---'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   )
