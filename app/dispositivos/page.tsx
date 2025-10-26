@@ -1,13 +1,27 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/data-table"
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog"
 import { StatusBadge } from "@/components/status-badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Cpu, Settings, Info } from "lucide-react"
+import { Cpu, Plus } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FormFieldWrapper } from "@/components/form-field-wrapper"
+import { FormSection } from "@/components/form-section"
 
 // Mock data
 const mockDevices = [
@@ -48,6 +62,65 @@ export default function DevicesListPage() {
     device: null,
   })
 
+  const [createDialog, setCreateDialog] = useState(false)
+  const [formData, setFormData] = useState({
+    nodeId: "",
+    description: "",
+    status: "PROVISIONING" as "ONLINE" | "OFFLINE" | "PROVISIONING" | "ERROR",
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.nodeId.trim()) {
+      newErrors.nodeId = "Node ID é obrigatório"
+    } else if (!/^HELTEC-[A-Z0-9]{6}$/.test(formData.nodeId)) {
+      newErrors.nodeId = "Node ID deve seguir o formato HELTEC-XXXXXX (6 caracteres alfanuméricos)"
+    } else if (devices.some((d) => d.nodeId === formData.nodeId)) {
+      newErrors.nodeId = "Este Node ID já está cadastrado"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    const newDevice = {
+      id: String(devices.length + 1),
+      nodeId: formData.nodeId,
+      description: formData.description,
+      status: formData.status,
+      gatewayId: "", // Gateway will be assigned when linking to a machine
+      machineName: null,
+      lastHeartbeat: null,
+    }
+
+    setDevices([...devices, newDevice])
+    setIsSubmitting(false)
+    setCreateDialog(false)
+
+    // Reset form
+    setFormData({
+      nodeId: "",
+      description: "",
+      status: "PROVISIONING",
+    })
+    setErrors({})
+  }
+
   const handleEdit = (device: (typeof mockDevices)[0]) => {
     router.push(`/dispositivos/${device.id}/editar`)
   }
@@ -74,11 +147,6 @@ export default function DevicesListPage() {
       key: "status",
       label: "Status",
       render: (value: "ONLINE" | "OFFLINE" | "PROVISIONING" | "ERROR") => <StatusBadge status={value} />,
-    },
-    {
-      key: "gatewayId",
-      label: "Gateway",
-      render: (value: string) => <span className="font-mono text-xs text-muted-foreground">{value}</span>,
     },
     {
       key: "machineName",
@@ -114,43 +182,130 @@ export default function DevicesListPage() {
                 <p className="text-xs text-muted-foreground">Gerenciar sensores Heltec V2</p>
               </div>
             </div>
-            <Button onClick={() => router.push("/cadastro/maquinas")} className="gap-2">
-              <Settings className="w-4 h-4" />
-              Cadastrar Máquina
-            </Button>
+            <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Cadastrar Dispositivo
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Cadastrar Novo Dispositivo</DialogTitle>
+                  <DialogDescription>
+                    Preencha as informações do sensor Heltec V2. A vinculação com gateway e máquina será feita
+                    posteriormente no cadastro da máquina.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+                  <FormSection
+                    title="Identificação do Dispositivo"
+                    description="Informações básicas do sensor Heltec V2"
+                  >
+                    <div className="space-y-4">
+                      <FormFieldWrapper
+                        label="Node ID"
+                        htmlFor="nodeId"
+                        required
+                        description="Identificador único do dispositivo (formato: HELTEC-XXXXXX)"
+                        error={errors.nodeId}
+                      >
+                        <Input
+                          id="nodeId"
+                          value={formData.nodeId}
+                          onChange={(e) => setFormData({ ...formData, nodeId: e.target.value.toUpperCase() })}
+                          placeholder="Ex: HELTEC-A8F3B2"
+                          className="bg-input border-border font-mono"
+                        />
+                      </FormFieldWrapper>
+
+                      <FormFieldWrapper
+                        label="Descrição / Localização"
+                        htmlFor="description"
+                        description="Localização física ou identificação adicional (opcional)"
+                      >
+                        <Textarea
+                          id="description"
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          placeholder="Ex: Sensor Setor A - Próximo à máquina CNC 01"
+                          className="bg-input border-border min-h-[80px] resize-none"
+                          rows={3}
+                        />
+                      </FormFieldWrapper>
+
+                      <FormFieldWrapper
+                        label="Status Inicial"
+                        htmlFor="status"
+                        required
+                        description="Estado do dispositivo no momento do cadastro"
+                      >
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value: "ONLINE" | "OFFLINE" | "PROVISIONING" | "ERROR") =>
+                            setFormData({ ...formData, status: value })
+                          }
+                        >
+                          <SelectTrigger id="status" className="bg-input border-border">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PROVISIONING">Provisionamento</SelectItem>
+                            <SelectItem value="OFFLINE">Offline</SelectItem>
+                            <SelectItem value="ONLINE">Online</SelectItem>
+                            <SelectItem value="ERROR">Erro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormFieldWrapper>
+                    </div>
+                  </FormSection>
+
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setCreateDialog(false)
+                        setFormData({
+                          nodeId: "",
+                          description: "",
+                          status: "PROVISIONING",
+                        })
+                        setErrors({})
+                      }}
+                      disabled={isSubmitting}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting} className="min-w-[140px]">
+                      {isSubmitting ? (
+                        <>
+                          <span className="inline-block w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        "Cadastrar Dispositivo"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-6">
-        {/* Informational card explaining device registration flow */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex gap-3">
-              <Info className="w-5 h-5 mt-0.5 text-primary flex-shrink-0" />
-              <div className="space-y-2">
-                <h3 className="font-semibold text-sm text-foreground">Como cadastrar novos dispositivos</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Os dispositivos IoT são criados automaticamente durante o processo de{" "}
-                  <span className="font-semibold text-foreground">cadastro de máquinas</span>. Cada máquina deve ter um
-                  sensor Heltec V2 vinculado para monitoramento de RPM, temperatura, nível de óleo e corrente elétrica.
-                  Para adicionar um novo dispositivo, clique em "Cadastrar Máquina" e preencha as informações do
-                  dispositivo na etapa final do formulário.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <DataTable
           title={`Total de Dispositivos: ${devices.length}`}
-          description="Lista completa de sensores IoT cadastrados no sistema"
+          description="Lista completa de sensores IoT cadastrados. A vinculação com gateway e máquina é feita no cadastro da máquina."
           columns={columns}
           data={devices}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          searchPlaceholder="Buscar por Node ID, descrição ou gateway..."
+          searchPlaceholder="Buscar por Node ID ou descrição..."
           emptyMessage="Nenhum dispositivo cadastrado no sistema"
         />
       </main>

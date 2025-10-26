@@ -20,14 +20,15 @@ const mockMachine = {
   manufacturer: "Siemens",
   serialNumber: "SN-2024-ABC-12345",
   status: "ACTIVE" as "ACTIVE" | "SUSPENDED" | "CANCELED",
-  clientId: "1",
+  gatewayId: "1",
   responsibleUserId: "1",
   deviceId: "1",
 }
 
-const mockClients = [
-  { id: "1", name: "Indústria Metalúrgica Silva LTDA" },
-  { id: "2", name: "Fábrica de Componentes Tech SA" },
+const mockGateways = [
+  { id: "1", gatewayId: "GW-001-ALPHA", status: "ONLINE" },
+  { id: "2", gatewayId: "GW-002-BETA", status: "ONLINE" },
+  { id: "3", gatewayId: "GW-003-GAMMA", status: "OFFLINE" },
 ]
 
 const mockUsers = [
@@ -58,16 +59,8 @@ export default function EditMachinePage() {
       newErrors.serialNumber = "Número de série é obrigatório"
     }
 
-    if (!formData.clientId) {
-      newErrors.clientId = "Cliente é obrigatório"
-    }
-
     if (!formData.responsibleUserId) {
       newErrors.responsibleUserId = "Usuário responsável é obrigatório"
-    }
-
-    if (!formData.deviceId) {
-      newErrors.deviceId = "Dispositivo IoT é obrigatório"
     }
 
     setErrors(newErrors)
@@ -216,27 +209,29 @@ export default function EditMachinePage() {
               {/* Vinculação e Responsabilidade */}
               <FormSection
                 title="Vinculação e Responsabilidade"
-                description="Associe a máquina ao cliente, usuário responsável e dispositivo IoT"
+                description="Associe a máquina ao gateway, dispositivo IoT e usuário responsável"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormFieldWrapper
-                    label="Cliente Proprietário"
-                    htmlFor="clientId"
-                    required
-                    description="Empresa proprietária da máquina"
-                    error={errors.clientId}
+                    label="Gateway"
+                    htmlFor="gatewayId"
+                    description="Gateway de comunicação IoT (opcional)"
+                    error={errors.gatewayId}
                   >
                     <Select
-                      value={formData.clientId}
-                      onValueChange={(value) => setFormData({ ...formData, clientId: value })}
+                      value={formData.gatewayId}
+                      onValueChange={(value) => setFormData({ ...formData, gatewayId: value })}
                     >
-                      <SelectTrigger id="clientId" className="bg-input border-border">
-                        <SelectValue placeholder="Selecione um cliente" />
+                      <SelectTrigger id="gatewayId" className="bg-input border-border">
+                        <SelectValue placeholder="Selecione um gateway" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockClients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name}
+                        {mockGateways.map((gateway) => (
+                          <SelectItem key={gateway.id} value={gateway.id}>
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono text-sm">{gateway.gatewayId}</span>
+                              <StatusBadge status={gateway.status as "ONLINE" | "OFFLINE"} />
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -273,8 +268,7 @@ export default function EditMachinePage() {
                   <FormFieldWrapper
                     label="Dispositivo IoT"
                     htmlFor="deviceId"
-                    required
-                    description="Sensor Heltec V2 que será vinculado à máquina"
+                    description="Sensor Heltec V2 vinculado à máquina (opcional)"
                     error={errors.deviceId}
                     className="md:col-span-2"
                   >

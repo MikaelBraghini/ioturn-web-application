@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-// useEffect não é mais necessário para carregar clientes
-import { useState } from "react" // useEffect removido se não houver outras chamadas na montagem
+
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,70 +10,69 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FormFieldWrapper } from "@/components/form-field-wrapper"
 import { FormSection } from "@/components/form-section"
 import { StatusBadge } from "@/components/status-badge"
-import { UserPlus, Save, X, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react"
+import { UserPlus, Save, X, Eye, EyeOff, Shield } from "lucide-react"
 import { useRouter } from "next/navigation"
-
-// 1. Importações de 'getClientList' e 'ClientDropdownItem' removidas
-// O tipo UserFormData agora só precisa dos campos restantes
-import { createUser, type UserFormData } from "@/app/api/cadastro/usuario/usuario-service" // Ajuste o caminho
-
-// Tipos para o estado do formulário
-type UserStatus = "ACTIVE" | "SUSPENDED" | "CANCELED"
-type UserType = "ADMIN" | "TECHNICIAN" | "VIEWER"
-
-// Definindo o tipo esperado pelo formulário localmente, já que 'clientId' foi removido
-type FormDataType = Omit<UserFormData, 'password' | 'clientId'> & { 
-  password: "", 
-  confirmPassword: "" 
-}
 
 export default function UserRegistrationPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // 2. 'clientId' removido do estado inicial do formData
-  const [formData, setFormData] = useState<FormDataType>({
+  const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
-    userType: "VIEWER" as UserType,
-    status: "ACTIVE" as UserStatus,
-    // clientId: "", // Removido
+    userType: "VIEWER" as "ADMIN" | "TECHNICIAN" | "VIEWER",
+    status: "ACTIVE" as "ACTIVE" | "SUSPENDED" | "CANCELED",
+    clientId: "",
   })
-
-  // 3. Estados 'clients' e 'clientsLoading' removidos
-  // const [clients, setClients] = useState<ClientDropdownItem[]>([])
-  // const [clientsLoading, setClientsLoading] = useState(true)
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null) // Para erros da API
 
-  // 4. 'useEffect' para carregar clientes removido
-  // useEffect(() => { ... loadClients ... }, [])
+  // Mock data - In production, fetch from API
+  const mockClients = [
+    { id: "1", name: "Indústria Metalúrgica Silva LTDA" },
+    { id: "2", name: "Fábrica de Componentes Tech SA" },
+    { id: "3", name: "Manufatura Industrial Brasil" },
+  ]
 
-  // 5. 'clientId' removido da validação
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    if (!formData.name.trim()) newErrors.name = "Nome completo é obrigatório"
-    if (!formData.email.trim()) newErrors.email = "E-mail é obrigatório"
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = "E-mail inválido"
-    if (!formData.password) newErrors.password = "Senha é obrigatória"
-    else if (formData.password.length < 8) newErrors.password = "Senha deve ter no mínimo 8 caracteres"
-    else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) newErrors.password = "Senha deve conter letras maiúsculas, minúsculas e números"
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "As senhas não coincidem"
-    // if (!formData.clientId) newErrors.clientId = "Cliente é obrigatório" // Removido
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Nome completo é obrigatório"
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "E-mail é obrigatório"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "E-mail inválido"
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Senha é obrigatória"
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Senha deve ter no mínimo 8 caracteres"
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = "Senha deve conter letras maiúsculas, minúsculas e números"
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "As senhas não coincidem"
+    }
+
+    if (!formData.clientId) {
+      newErrors.clientId = "Cliente é obrigatório"
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  // 6. handleSubmit atualizado
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitError(null) 
 
     if (!validateForm()) {
       return
@@ -81,38 +80,37 @@ export default function UserRegistrationPage() {
 
     setIsSubmitting(true)
 
-    try {
-      // Prepara os dados para o serviço (omitindo confirmPassword)
-      // 'clientId' já não existe mais em formData
-      const { confirmPassword, ...userData } = formData
-      
-      // Chama a função real do serviço
-      // A função createUser no seu service também precisará ser ajustada
-      // para não esperar 'clientId'
-      await createUser(userData as Omit<UserFormData, 'password'>) // Força a tipagem
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      // Sucesso - redireciona
-      router.push("/")
+    console.log("Usuário cadastrado:", { ...formData, password: "***", confirmPassword: "***" })
+    setIsSubmitting(false)
 
-    } catch (error) {
-      console.error("Falha ao cadastrar usuário:", error)
-      setSubmitError("Não foi possível salvar o usuário. Verifique os dados ou tente novamente mais tarde.")
-    } finally {
-      setIsSubmitting(false)
-    }
+    router.push("/")
   }
 
-  // Objeto de configuração (sem alteração)
   const userTypeConfig = {
-    ADMIN: { label: "Administrador", description: "Acesso total ao sistema...", color: "text-red-400" },
-    TECHNICIAN: { label: "Técnico", description: "Pode gerenciar máquinas...", color: "text-blue-400" },
-    VIEWER: { label: "Visualizador", description: "Acesso somente leitura...", color: "text-green-400" },
+    ADMIN: {
+      label: "Administrador",
+      description: "Acesso total ao sistema, incluindo configurações e gerenciamento de usuários",
+      color: "text-red-400",
+    },
+    TECHNICIAN: {
+      label: "Técnico",
+      description: "Pode gerenciar máquinas, dispositivos e visualizar dados de sensores",
+      color: "text-blue-400",
+    },
+    VIEWER: {
+      label: "Visualizador",
+      description: "Acesso somente leitura aos dashboards e relatórios",
+      color: "text-green-400",
+    },
   }
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header (sem alteração) */}
+        {/* Header */}
         <div className="flex items-center gap-4">
           <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
             <UserPlus className="w-6 h-6 text-primary" />
@@ -126,7 +124,6 @@ export default function UserRegistrationPage() {
         {/* Form Card */}
         <Card className="border-border shadow-lg">
           <CardHeader className="border-b border-border bg-card/50">
-            {/* ...Título e Descrição do Card (sem alteração)... */}
             <CardTitle className="flex items-center gap-2">
               <span>Informações do Usuário</span>
               <StatusBadge status={formData.status} />
@@ -136,35 +133,99 @@ export default function UserRegistrationPage() {
 
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Dados Pessoais (sem alteração) */}
+              {/* Dados Pessoais */}
               <FormSection title="Dados Pessoais" description="Informações básicas de identificação do usuário">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormFieldWrapper label="Nome Completo" htmlFor="name" required description="Nome e sobrenome do usuário" error={errors.name} className="md:col-span-2">
-                    <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: João Silva Santos" className="bg-input border-border" />
+                  <FormFieldWrapper
+                    label="Nome Completo"
+                    htmlFor="name"
+                    required
+                    description="Nome e sobrenome do usuário"
+                    error={errors.name}
+                    className="md:col-span-2"
+                  >
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Ex: João Silva Santos"
+                      className="bg-input border-border"
+                    />
                   </FormFieldWrapper>
-                  <FormFieldWrapper label="E-mail" htmlFor="email" required description="E-mail para login e notificações do sistema" error={errors.email} className="md:col-span-2">
-                    <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="usuario@empresa.com.br" className="bg-input border-border" />
+
+                  <FormFieldWrapper
+                    label="E-mail"
+                    htmlFor="email"
+                    required
+                    description="E-mail para login e notificações do sistema"
+                    error={errors.email}
+                    className="md:col-span-2"
+                  >
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="usuario@empresa.com.br"
+                      className="bg-input border-border"
+                    />
                   </FormFieldWrapper>
                 </div>
               </FormSection>
 
-              {/* Credenciais de Acesso (sem alteração) */}
-              <FormSection title="Credenciais de Acesso" description="Defina a senha de acesso ao sistema (mínimo 8 caracteres)">
+              {/* Credenciais de Acesso */}
+              <FormSection
+                title="Credenciais de Acesso"
+                description="Defina a senha de acesso ao sistema (mínimo 8 caracteres)"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* ...Campo Senha... */}
-                  <FormFieldWrapper label="Senha" htmlFor="password" required description="Deve conter letras maiúsculas, minúsculas e números" error={errors.password}>
+                  <FormFieldWrapper
+                    label="Senha"
+                    htmlFor="password"
+                    required
+                    description="Deve conter letras maiúsculas, minúsculas e números"
+                    error={errors.password}
+                  >
                     <div className="relative">
-                      <Input id="password" type={showPassword ? "text" : "password"} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="••••••••" className="bg-input border-border font-mono pr-10" />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="••••••••"
+                        className="bg-input border-border font-mono pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </FormFieldWrapper>
-                  {/* ...Campo Confirmar Senha... */}
-                  <FormFieldWrapper label="Confirmar Senha" htmlFor="confirmPassword" required description="Digite a senha novamente para confirmar" error={errors.confirmPassword}>
+
+                  <FormFieldWrapper
+                    label="Confirmar Senha"
+                    htmlFor="confirmPassword"
+                    required
+                    description="Digite a senha novamente para confirmar"
+                    error={errors.confirmPassword}
+                  >
                     <div className="relative">
-                      <Input id="confirmPassword" type={showConfirmPassword ? "text" : "password"} value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} placeholder="••••••••" className="bg-input border-border font-mono pr-10" />
-                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={formData.confirmPassword}
+                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                        placeholder="••••••••"
+                        className="bg-input border-border font-mono pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
@@ -172,26 +233,57 @@ export default function UserRegistrationPage() {
                 </div>
               </FormSection>
 
-              {/* 7. Seção "Cliente Associado" removida */}
-              <FormSection title="Permissões e Vinculação" description="Defina o nível de acesso e associe o usuário a um cliente">
+              {/* Permissões e Vinculação */}
+              <FormSection
+                title="Permissões e Vinculação"
+                description="Defina o nível de acesso e associe o usuário a um cliente"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* ...Campo Tipo de Usuário (sem alteração)... */}
-                  <FormFieldWrapper label="Tipo de Usuário" htmlFor="userType" required description="Nível de permissão no sistema">
-                    <Select value={formData.userType} onValueChange={(value: UserType) => setFormData({ ...formData, userType: value })}>
+                  <FormFieldWrapper
+                    label="Tipo de Usuário"
+                    htmlFor="userType"
+                    required
+                    description="Nível de permissão no sistema"
+                  >
+                    <Select
+                      value={formData.userType}
+                      onValueChange={(value: "ADMIN" | "TECHNICIAN" | "VIEWER") =>
+                        setFormData({ ...formData, userType: value })
+                      }
+                    >
                       <SelectTrigger id="userType" className="bg-input border-border">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ADMIN"><div className="flex items-center gap-2"><Shield className="w-4 h-4 text-red-400" /><span>Administrador</span></div></SelectItem>
-                        <SelectItem value="TECHNICIAN"><div className="flex items-center gap-2"><Shield className="w-4 h-4 text-blue-400" /><span>Técnico</span></div></SelectItem>
-                        <SelectItem value="VIEWER"><div className="flex items-center gap-2"><Shield className="w-4 h-4 text-green-400" /><span>Visualizador</span></div></SelectItem>
+                        <SelectItem value="ADMIN">
+                          <div className="flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-red-400" />
+                            <span>Administrador</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="TECHNICIAN">
+                          <div className="flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-blue-400" />
+                            <span>Técnico</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="VIEWER">
+                          <div className="flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-green-400" />
+                            <span>Visualizador</span>
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </FormFieldWrapper>
 
-                  {/* ...Campo Status (sem alteração)... */}
                   <FormFieldWrapper label="Status" htmlFor="status" required description="Situação atual do usuário">
-                    <Select value={formData.status} onValueChange={(value: UserStatus) => setFormData({ ...formData, status: value })}>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value: "ACTIVE" | "SUSPENDED" | "CANCELED") =>
+                        setFormData({ ...formData, status: value })
+                      }
+                    >
                       <SelectTrigger id="status" className="bg-input border-border">
                         <SelectValue />
                       </SelectTrigger>
@@ -203,12 +295,33 @@ export default function UserRegistrationPage() {
                     </Select>
                   </FormFieldWrapper>
 
-                  {/* 6. Campo Cliente Associado REMOVIDO */}
-                  {/* <FormFieldWrapper ... /> */}
-
+                  <FormFieldWrapper
+                    label="Cliente Associado"
+                    htmlFor="clientId"
+                    required
+                    description="Empresa à qual o usuário pertence"
+                    error={errors.clientId}
+                    className="md:col-span-2"
+                  >
+                    <Select
+                      value={formData.clientId}
+                      onValueChange={(value) => setFormData({ ...formData, clientId: value })}
+                    >
+                      <SelectTrigger id="clientId" className="bg-input border-border">
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockClients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormFieldWrapper>
                 </div>
 
-                {/* ...Card de Informação de Permissão (sem alteração)... */}
+                {/* User Type Info Card */}
                 {formData.userType && (
                   <Card className="border-primary/20 bg-primary/5">
                     <CardContent className="pt-4">
@@ -228,17 +341,15 @@ export default function UserRegistrationPage() {
                 )}
               </FormSection>
 
-              {/* 7. Exibe erro da API, se houver */}
-              {submitError && (
-                <div className="flex items-center gap-2 text-sm font-medium text-red-500 bg-red-500/10 p-3 rounded-lg border border-red-500/20">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                  <p>{submitError}</p>
-                </div>
-              )}
-
-              {/* Action Buttons (sem alteração) */}
+              {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
-                <Button type="button" variant="outline" onClick={() => router.push("/")} disabled={isSubmitting} className="gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/")}
+                  disabled={isSubmitting}
+                  className="gap-2"
+                >
                   <X className="w-4 h-4" />
                   Cancelar
                 </Button>
@@ -260,12 +371,25 @@ export default function UserRegistrationPage() {
           </CardContent>
         </Card>
 
-        {/* Help Text (sem alteração) */}
+        {/* Help Text */}
         <Card className="border-accent/20 bg-accent/5">
-          {/* ...Conteúdo do Card de Ajuda... */}
+          <CardContent className="pt-6">
+            <div className="flex gap-3">
+              <div className="w-1 bg-accent rounded-full" />
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm text-foreground">Diretrizes de Cadastro</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 leading-relaxed">
+                  <li>• O e-mail deve ser único no sistema e será usado para login</li>
+                  <li>• Senhas devem ter no mínimo 8 caracteres com letras maiúsculas, minúsculas e números</li>
+                  <li>• Administradores têm acesso total, incluindo gerenciamento de usuários e configurações</li>
+                  <li>• Técnicos podem gerenciar máquinas e dispositivos, mas não alterar configurações do sistema</li>
+                  <li>• Visualizadores têm acesso somente leitura aos dashboards e relatórios</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </div>
   )
 }
-
