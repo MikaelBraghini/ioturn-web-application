@@ -20,8 +20,7 @@ export default function MachineRegistrationPage() {
     serialNumber: "",
     status: "ACTIVE" as "ACTIVE" | "SUSPENDED" | "CANCELED",
     responsibleUserId: "",
-    // Device data (new device to be created with machine)
-    deviceNodeId: "",
+    deviceId: "",
     deviceGatewayId: "",
   })
 
@@ -46,17 +45,12 @@ export default function MachineRegistrationPage() {
     { id: "3", nodeId: "ESP32-GW-003", status: "PROVISIONING" },
   ]
 
-  const validateNodeId = (nodeId: string): boolean => {
-    // Remove common prefixes and separators
-    const cleanedId = nodeId
-      .replace(/^(ESP32-|HELTEC-|ESP-)/i, "")
-      .replace(/[:\-\s]/g, "")
-      .trim()
-
-    // Check if it's a valid hexadecimal string (6-12 characters for MAC address)
-    const hexPattern = /^[0-9A-Fa-f]{6,12}$/
-    return hexPattern.test(cleanedId)
-  }
+  const mockAvailableDevices = [
+    { id: "1", nodeId: "HELTEC-A8F3B2", status: "PROVISIONING", gatewayId: "1" },
+    { id: "2", nodeId: "HELTEC-C4D9E1", status: "PROVISIONING", gatewayId: "2" },
+    { id: "3", nodeId: "HELTEC-F7A2C8", status: "PROVISIONING", gatewayId: "3" },
+    { id: "4", nodeId: "HELTEC-D5E6F7", status: "PROVISIONING", gatewayId: "1" },
+  ]
 
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {}
@@ -85,21 +79,8 @@ export default function MachineRegistrationPage() {
   }
 
   const validateStep3 = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.deviceNodeId.trim()) {
-      newErrors.deviceNodeId = "Node ID do dispositivo é obrigatório"
-    } else if (!validateNodeId(formData.deviceNodeId)) {
-      newErrors.deviceNodeId =
-        "Node ID inválido. Use formato hexadecimal (ex: AABBCCDDEE, AA:BB:CC:DD:EE:FF, ESP32-AABBCC)"
-    }
-
-    if (!formData.deviceGatewayId) {
-      newErrors.deviceGatewayId = "Gateway é obrigatório"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    // No validation needed - gateway and device are optional
+    return true
   }
 
   const handleComplete = async () => {
@@ -112,7 +93,7 @@ export default function MachineRegistrationPage() {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500))
 
-    console.log("Máquina e dispositivo cadastrados:", {
+    console.log("Máquina e dispositivo vinculados:", {
       ...formData,
       clientId: loggedInClient.id,
     })
@@ -120,6 +101,12 @@ export default function MachineRegistrationPage() {
 
     router.push("/maquinas")
   }
+
+  const selectedDevice = mockAvailableDevices.find((d) => d.id === formData.deviceId)
+
+  const filteredDevices = formData.deviceGatewayId
+    ? mockAvailableDevices.filter((d) => d.gatewayId === formData.deviceGatewayId)
+    : mockAvailableDevices
 
   const steps: Step[] = [
     {
@@ -253,36 +240,21 @@ export default function MachineRegistrationPage() {
     {
       id: "device",
       title: "Dispositivo IoT",
-      description: "Configure o sensor que será instalado na máquina",
+      description: "Vincule um sensor disponível à máquina (opcional)",
       validate: validateStep3,
       content: (
         <div className="space-y-4">
           <FormFieldWrapper
-            label="Node ID do Dispositivo"
-            htmlFor="deviceNodeId"
-            required
-            description="Identificador hexadecimal único do chip Espressif (Heltec V2)"
-            error={errors.deviceNodeId}
-          >
-            <Input
-              id="deviceNodeId"
-              value={formData.deviceNodeId}
-              onChange={(e) => setFormData({ ...formData, deviceNodeId: e.target.value })}
-              placeholder="Ex: AABBCCDDEEFF, AA:BB:CC:DD:EE:FF, ESP32-AABBCC"
-              className="bg-input border-border font-mono"
-            />
-          </FormFieldWrapper>
-
-          <FormFieldWrapper
             label="Gateway Responsável"
             htmlFor="deviceGatewayId"
-            required
-            description="Gateway ESP32 que gerenciará este sensor"
+            description="Gateway ESP32 que gerenciará este sensor (opcional)"
             error={errors.deviceGatewayId}
           >
             <Select
               value={formData.deviceGatewayId}
-              onValueChange={(value) => setFormData({ ...formData, deviceGatewayId: value })}
+              onValueChange={(value) => {
+                setFormData({ ...formData, deviceGatewayId: value, deviceId: "" })
+              }}
             >
               <SelectTrigger id="deviceGatewayId" className="bg-input border-border">
                 <SelectValue placeholder="Selecione um gateway" />
@@ -300,10 +272,66 @@ export default function MachineRegistrationPage() {
             </Select>
           </FormFieldWrapper>
 
+          <FormFieldWrapper
+            label="Dispositivo IoT"
+            htmlFor="deviceId"
+            description="Selecione um sensor Heltec V2 disponível para vinculação (opcional)"
+            error={errors.deviceId}
+          >
+            <Select
+              value={formData.deviceId}
+              onValueChange={(value) => setFormData({ ...formData, deviceId: value })}
+              disabled={!formData.deviceGatewayId}
+            >
+              <SelectTrigger id="deviceId" className="bg-input border-border">
+                <SelectValue
+                  placeholder={formData.deviceGatewayId ? "Selecione um dispositivo" : "Selecione um gateway primeiro"}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredDevices.length > 0 ? (
+                  filteredDevices.map((device) => (
+                    <SelectItem key={device.id} value={device.id}>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-sm">{device.nodeId}</span>
+                        <StatusBadge status={device.status as "PROVISIONING"} />
+                      </div>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-devices" disabled>
+                    Nenhum dispositivo disponível para este gateway
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </FormFieldWrapper>
+
+          {selectedDevice && (
+            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm text-foreground">Dispositivo Selecionado</h4>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>
+                      <span className="font-semibold text-foreground">Node ID:</span>{" "}
+                      <span className="font-mono">{selectedDevice.nodeId}</span>
+                    </p>
+                    <p>
+                      <span className="font-semibold text-foreground">Status:</span> Pronto para vinculação
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="p-4 bg-muted/50 rounded-lg border border-border">
             <p className="text-sm text-muted-foreground">
-              O dispositivo será criado automaticamente e vinculado a esta máquina. Ele começará a coletar dados de RPM,
-              temperatura do óleo, nível de óleo e corrente elétrica após a ativação.
+              {formData.deviceId
+                ? "O dispositivo selecionado será vinculado automaticamente a esta máquina. Ele começará a coletar dados de RPM, temperatura do óleo, nível de óleo e corrente elétrica após a ativação."
+                : "Você pode vincular um dispositivo IoT agora ou fazer isso posteriormente através da edição da máquina. A máquina será criada sem monitoramento até que um dispositivo seja vinculado."}
             </p>
           </div>
         </div>
@@ -321,7 +349,7 @@ export default function MachineRegistrationPage() {
             </div>
             <h1 className="text-2xl font-semibold text-foreground">Cadastro de Máquina</h1>
           </div>
-          <p className="text-sm text-muted-foreground">Registre uma nova máquina e seu dispositivo IoT</p>
+          <p className="text-sm text-muted-foreground">Registre uma nova máquina e vincule um dispositivo IoT</p>
         </div>
 
         <MultiStepForm

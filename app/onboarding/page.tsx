@@ -1,22 +1,22 @@
-'use client'
+"use client"
 
-import type React from 'react'
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ArrowRight, Building2, CheckCircle2, Lock, Mail, Shield } from 'lucide-react'
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import type React from "react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ArrowRight, Building2, CheckCircle2, Lock, Mail, Shield } from "lucide-react"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 export default function OnboardingPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
-    companyName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    companyName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   })
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -26,19 +26,19 @@ export default function OnboardingPage() {
     const newErrors: Record<string, string> = {}
 
     if (formData.companyName.length < 3) {
-      newErrors.companyName = 'Nome da empresa deve ter pelo menos 3 caracteres'
+      newErrors.companyName = "Nome da empresa deve ter pelo menos 3 caracteres"
     }
 
-    if (!formData.email.includes('@')) {
-      newErrors.email = 'E-mail inválido'
+    if (!formData.email.includes("@")) {
+      newErrors.email = "E-mail inválido"
     }
 
     if (formData.password.length < 8) {
-      newErrors.password = 'Senha deve ter pelo menos 8 caracteres'
+      newErrors.password = "Senha deve ter pelo menos 8 caracteres"
     }
 
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'As senhas não coincidem'
+      newErrors.confirmPassword = "As senhas não coincidem"
     }
 
     setErrors(newErrors)
@@ -57,7 +57,7 @@ export default function OnboardingPage() {
     // Simulate external API call to registration service
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    console.log('[v0] Company registration:', {
+    console.log("[v0] Company registration:", {
       companyName: formData.companyName,
       email: formData.email,
       timestamp: new Date().toISOString(),
@@ -67,7 +67,7 @@ export default function OnboardingPage() {
     setShowSuccess(true)
 
     setTimeout(() => {
-      router.push('/monitoramento')
+      router.push("/monitoramento")
     }, 3000)
   }
 
@@ -99,14 +99,11 @@ export default function OnboardingPage() {
           <div className="space-y-4">
             <h2 className="text-3xl font-bold">Cadastro realizado com sucesso!</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Sua empresa{' '}
-              <span className="font-semibold text-foreground">{formData.companyName}</span> foi
-              registrada em nossa plataforma.
+              Sua empresa <span className="font-semibold text-foreground">{formData.companyName}</span> foi registrada
+              em nossa plataforma.
             </p>
             <div className="pt-4 space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Enviamos um e-mail de confirmação para:
-              </p>
+              <p className="text-sm text-muted-foreground">Enviamos um e-mail de confirmação para:</p>
               <p className="text-sm font-medium text-primary">{formData.email}</p>
             </div>
           </div>
@@ -140,10 +137,7 @@ export default function OnboardingPage() {
                 priority
               />
             </div>
-            <a
-              href="/"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <a href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               ← Voltar ao site
             </a>
           </div>
@@ -161,12 +155,9 @@ export default function OnboardingPage() {
               </div>
             </div>
             <div className="space-y-3">
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-balance">
-                Cadastre sua empresa
-              </h1>
+              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-balance">Cadastre sua empresa</h1>
               <p className="text-lg text-muted-foreground text-balance max-w-md mx-auto leading-relaxed">
-                Preencha os dados abaixo para criar sua conta e começar a monitorar seus
-                dispositivos IoT
+                Preencha os dados abaixo para criar sua conta e começar a monitorar seus dispositivos IoT
               </p>
             </div>
           </div>
@@ -189,9 +180,7 @@ export default function OnboardingPage() {
                     required
                     className="h-12 text-base"
                   />
-                  {errors.companyName && (
-                    <p className="text-xs text-destructive">{errors.companyName}</p>
-                  )}
+                  {errors.companyName && <p className="text-xs text-destructive">{errors.companyName}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -209,9 +198,7 @@ export default function OnboardingPage() {
                     className="h-12 text-base"
                   />
                   {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-                  <p className="text-xs text-muted-foreground">
-                    Este será seu e-mail de acesso à plataforma
-                  </p>
+                  <p className="text-xs text-muted-foreground">Este será seu e-mail de acesso à plataforma</p>
                 </div>
 
                 <div className="space-y-2">
@@ -247,9 +234,7 @@ export default function OnboardingPage() {
                     minLength={8}
                     className="h-12 text-base"
                   />
-                  {errors.confirmPassword && (
-                    <p className="text-xs text-destructive">{errors.confirmPassword}</p>
-                  )}
+                  {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
                 </div>
               </div>
 
@@ -274,11 +259,11 @@ export default function OnboardingPage() {
                 </Button>
 
                 <p className="text-xs text-center text-muted-foreground leading-relaxed px-4">
-                  Ao criar uma conta, você concorda com nossos{' '}
+                  Ao criar uma conta, você concorda com nossos{" "}
                   <a href="#" className="text-primary hover:underline font-medium">
                     Termos de Serviço
-                  </a>{' '}
-                  e{' '}
+                  </a>{" "}
+                  e{" "}
                   <a href="#" className="text-primary hover:underline font-medium">
                     Política de Privacidade
                   </a>
@@ -344,12 +329,8 @@ export default function OnboardingPage() {
       {/* Footer */}
       <footer className="border-t border-border/50 py-8 px-4 mt-12">
         <div className="max-w-7xl mx-auto text-center space-y-2">
-          <p className="text-sm text-muted-foreground">
-            © 2025 IoTurn - Plataforma de Monitoramento Industrial
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Portal de Cadastro Externo | Acesso restrito a novas empresas
-          </p>
+          <p className="text-sm text-muted-foreground">© 2025 IoTurn - Plataforma de Monitoramento Industrial</p>
+          <p className="text-xs text-muted-foreground">Portal de Cadastro Externo | Acesso restrito a novas empresas</p>
         </div>
       </footer>
     </div>
