@@ -3,7 +3,7 @@ import axios from 'axios'
 // --- Instância do Axios ---
 // A baseURL parece correta para o seu ambiente de desenvolvimento
 const apiClient = axios.create({
-  baseURL: 'http://10.110.12.59:3000',
+  baseURL: 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -18,7 +18,7 @@ export type Machine = {
   model: string
   manufacturer: string
   serialNumber: string
-  status: "ACTIVE" | "CANCELED" | "SUSPENDED"
+  status: 'ACTIVE' | 'CANCELED' | 'SUSPENDED'
   clientId: number
   responsibleUserId: number
   client: string // <-- CORREÇÃO: O componente espera a string (companyName)
@@ -36,7 +36,7 @@ interface ApiMachineListResponse {
   model: string
   manufacturer: string
   serialNumber: string
-  status: "ACTIVE" | "CANCELED" | "SUSPENDED"
+  status: 'ACTIVE' | 'CANCELED' | 'SUSPENDED'
   clientId: number
   responsibleUserId: number
   client: { companyName: string } // API retorna um objeto
@@ -73,7 +73,7 @@ export const getMachineList = async (): Promise<Machine[]> => {
   try {
     // O endpoint /machines/getAll/1 está mantido
     const response = await apiClient.get<ApiMachineListResponse[]>('/machines/getAll/1')
-    
+
     // Mudei o console.log para ser um pouco mais descritivo
     console.log('Dados recebidos da API:', response.data)
 
