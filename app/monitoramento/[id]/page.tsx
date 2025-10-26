@@ -1,25 +1,40 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Gauge, Thermometer, Droplet, Zap, RefreshCw, TrendingUp, TrendingDown, Minus, ArrowLeft } from "lucide-react"
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-
-const generateMockData = (baseValue: number, variance: number, points = 20) => {
-  return Array.from({ length: points }, (_, i) => ({
-    time: `${String(14 + Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`,
-    value: baseValue + (Math.random() - 0.5) * variance,
-  }))
-}
-
-const mockMachines = [
-  { id: "1", name: "Torno CNC Setor A", deviceId: "HELTEC-A8F3B2", color: "#3b82f6" },
-  { id: "2", name: "Fresadora Setor B", deviceId: "HELTEC-C4D9E1", color: "#10b981" },
-  { id: "3", name: "Prensa Hidráulica Setor C", deviceId: "HELTEC-F7A2C8", color: "#f59e0b" },
-]
+import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Gauge,
+  Thermometer,
+  Droplet,
+  Zap,
+  RefreshCw,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ArrowLeft,
+} from 'lucide-react'
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
+import axios from 'axios'
+import { getMachineData } from '@/app/api/monitoramento/monitoramento-service'
 
 const calculateStats = (data: { time: string; value: number }[]) => {
   const values = data.map((d) => d.value)
@@ -35,52 +50,54 @@ export default function MachineMonitoringPage() {
   const params = useParams()
   const machineId = params.id as string
 
-  const [timeRange, setTimeRange] = useState("1h")
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [timeRange, setTimeRange] = useState('1h')
+  const [isRefreshing, setIsRefreshing] = useState(true)
   const [lastUpdate, setLastUpdate] = useState(new Date())
   const [machineData, setMachineData] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null) // NOVO: Estado para armazenar mensagens de erro
 
-  const machine = mockMachines.find((m) => m.id === machineId)
+  const getDadosMachine = async () => {
+    const data = await getMachineData(machineId)
+    setMachineData(data)
+    setLastUpdate(new Date())
+  }
 
   useEffect(() => {
-    if (!machine) return
+    if (!machineId) return
 
-    const updateData = () => {
-      setMachineData({
-        rpm: generateMockData(1500, 200),
-        temperature: generateMockData(75, 15),
-        oilLevel: generateMockData(85, 10),
-        current: generateMockData(12, 3),
-      })
-      setLastUpdate(new Date())
+    const updateData = async () => {
+      setError(null)
+      try {
+        getDadosMachine()
+      } catch (err) {
+        console.error('Erro ao buscar dados no componente:', err)
+
+        let errorMessage = 'Ocorreu um erro desconhecido.'
+        if (axios.isAxiosError(err)) {
+          errorMessage = err.response?.data?.message || err.message
+        } else if (err instanceof Error) {
+          errorMessage = err.message
+        }
+
+        setError(errorMessage)
+      } finally {
+        setIsRefreshing(false)
+      }
     }
 
     updateData()
     const interval = setInterval(updateData, 5000)
 
     return () => clearInterval(interval)
-  }, [machine, timeRange])
+  }, [machineId, timeRange])
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    setMachineData({
-      rpm: generateMockData(1500, 200),
-      temperature: generateMockData(75, 15),
-      oilLevel: generateMockData(85, 10),
-      current: generateMockData(12, 3),
-    })
-    setLastUpdate(new Date())
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    setIsRefreshing(false)
-  }
-
-  if (!machine) {
+  if (!machineId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="border-border">
           <CardContent className="pt-6">
             <p className="text-muted-foreground">Máquina não encontrada</p>
-            <Button onClick={() => router.push("/maquinas-monitoramento")} className="mt-4">
+            <Button onClick={() => router.push('/maquinas-monitoramento')} className="mt-4">
               Voltar
             </Button>
           </CardContent>
@@ -115,20 +132,32 @@ export default function MachineMonitoringPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button onClick={() => router.push("/maquinas-monitoramento")} variant="ghost" size="icon">
+              <Button
+                onClick={() => router.push('/maquinas-monitoramento')}
+                variant="ghost"
+                size="icon"
+              >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: machine.color }} />
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: machineData.color }}
+              />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">{machine.name}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{machineData.name}</h1>
                 <p className="text-xs text-muted-foreground">
-                  {machine.deviceId} • Atualizado: {lastUpdate.toLocaleTimeString("pt-BR")}
+                  {machineData.deviceId} • Atualizado: {lastUpdate.toLocaleTimeString('pt-BR')}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button onClick={handleRefresh} variant="outline" size="icon" disabled={isRefreshing}>
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              <Button
+                onClick={getDadosMachine}
+                variant="outline"
+                size="icon"
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>
             </div>
           </div>
@@ -168,7 +197,9 @@ export default function MachineMonitoringPage() {
                     </p>
                     <Gauge className="w-4 h-4 text-primary" />
                   </div>
-                  <p className="text-2xl font-bold font-mono text-foreground">{currentValues.rpm.toFixed(0)}</p>
+                  <p className="text-2xl font-bold font-mono text-foreground">
+                    {currentValues.rpm.toFixed(0)}
+                  </p>
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
                     <div>
                       <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
@@ -246,7 +277,9 @@ export default function MachineMonitoringPage() {
                     </p>
                     <Droplet className="w-4 h-4 text-primary" />
                   </div>
-                  <p className="text-2xl font-bold font-mono text-foreground">{currentValues.oilLevel.toFixed(0)}%</p>
+                  <p className="text-2xl font-bold font-mono text-foreground">
+                    {currentValues.oilLevel.toFixed(0)}%
+                  </p>
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
                     <div>
                       <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
@@ -284,28 +317,36 @@ export default function MachineMonitoringPage() {
                     </p>
                     <Zap className="w-4 h-4 text-primary" />
                   </div>
-                  <p className="text-2xl font-bold font-mono text-foreground">{currentValues.current.toFixed(1)}A</p>
+                  <p className="text-2xl font-bold font-mono text-foreground">
+                    {currentValues.current.toFixed(1)}A
+                  </p>
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
                     <div>
                       <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                         <TrendingDown className="w-3 h-3" />
                         Mín
                       </p>
-                      <p className="text-xs font-mono font-semibold">{currentStats.min.toFixed(1)}A</p>
+                      <p className="text-xs font-mono font-semibold">
+                        {currentStats.min.toFixed(1)}A
+                      </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                         <Minus className="w-3 h-3" />
                         Méd
                       </p>
-                      <p className="text-xs font-mono font-semibold">{currentStats.avg.toFixed(1)}A</p>
+                      <p className="text-xs font-mono font-semibold">
+                        {currentStats.avg.toFixed(1)}A
+                      </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                         <TrendingUp className="w-3 h-3" />
                         Máx
                       </p>
-                      <p className="text-xs font-mono font-semibold">{currentStats.max.toFixed(1)}A</p>
+                      <p className="text-xs font-mono font-semibold">
+                        {currentStats.max.toFixed(1)}A
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -326,24 +367,24 @@ export default function MachineMonitoringPage() {
                   <AreaChart data={machineData.rpm}>
                     <defs>
                       <linearGradient id="rpmGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={machine.color} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={machine.color} stopOpacity={0} />
+                        <stop offset="5%" stopColor={machineData.color} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={machineData.color} stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="time" stroke="#888" style={{ fontSize: "11px" }} />
-                    <YAxis stroke="#888" style={{ fontSize: "11px" }} />
+                    <XAxis dataKey="time" stroke="#888" style={{ fontSize: '11px' }} />
+                    <YAxis stroke="#888" style={{ fontSize: '11px' }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#1a1a1a",
-                        border: "1px solid #333",
-                        borderRadius: "6px",
+                        backgroundColor: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: '6px',
                       }}
                     />
                     <Area
                       type="monotone"
                       dataKey="value"
-                      stroke={machine.color}
+                      stroke={machineData.color}
                       fill="url(#rpmGradient)"
                       strokeWidth={2}
                     />
@@ -361,19 +402,31 @@ export default function MachineMonitoringPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={machineData.temperature}>
+                  <AreaChart data={machineData.temperature}>
+                    <defs>
+                      <linearGradient id="temperatureGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={machineData.color} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={machineData.color} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="time" stroke="#888" style={{ fontSize: "11px" }} />
-                    <YAxis stroke="#888" style={{ fontSize: "11px" }} />
+                    <XAxis dataKey="time" stroke="#888" style={{ fontSize: '11px' }} />
+                    <YAxis stroke="#888" style={{ fontSize: '11px' }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#1a1a1a",
-                        border: "1px solid #333",
-                        borderRadius: "6px",
+                        backgroundColor: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: '6px',
                       }}
                     />
-                    <Line type="monotone" dataKey="value" stroke={machine.color} strokeWidth={2} dot={false} />
-                  </LineChart>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke={machineData.color}
+                      fill="url(#rpmGradient)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -390,24 +443,24 @@ export default function MachineMonitoringPage() {
                   <AreaChart data={machineData.oilLevel}>
                     <defs>
                       <linearGradient id="oilGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={machine.color} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={machine.color} stopOpacity={0} />
+                        <stop offset="5%" stopColor={machineData.color} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={machineData.color} stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="time" stroke="#888" style={{ fontSize: "11px" }} />
-                    <YAxis stroke="#888" style={{ fontSize: "11px" }} />
+                    <XAxis dataKey="time" stroke="#888" style={{ fontSize: '11px' }} />
+                    <YAxis stroke="#888" style={{ fontSize: '11px' }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#1a1a1a",
-                        border: "1px solid #333",
-                        borderRadius: "6px",
+                        backgroundColor: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: '6px',
                       }}
                     />
                     <Area
                       type="monotone"
                       dataKey="value"
-                      stroke={machine.color}
+                      stroke={machineData.color}
                       fill="url(#oilGradient)"
                       strokeWidth={2}
                     />
@@ -425,19 +478,31 @@ export default function MachineMonitoringPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={machineData.current}>
+                  <AreaChart data={machineData.current}>
+                    <defs>
+                      <linearGradient id="currentGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={machineData.color} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={machineData.color} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="time" stroke="#888" style={{ fontSize: "11px" }} />
-                    <YAxis stroke="#888" style={{ fontSize: "11px" }} />
+                    <XAxis dataKey="time" stroke="#888" style={{ fontSize: '11px' }} />
+                    <YAxis stroke="#888" style={{ fontSize: '11px' }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#1a1a1a",
-                        border: "1px solid #333",
-                        borderRadius: "6px",
+                        backgroundColor: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: '6px',
                       }}
                     />
-                    <Line type="monotone" dataKey="value" stroke={machine.color} strokeWidth={2} dot={false} />
-                  </LineChart>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke={machineData.color}
+                      fill="url(#rpmGradient)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
