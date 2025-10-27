@@ -1,60 +1,63 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/data-table"
-import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog"
-import { StatusBadge } from "@/components/status-badge"
-import { Settings, Plus } from "lucide-react"
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { DataTable } from '@/components/data-table'
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
+import { StatusBadge } from '@/components/status-badge'
+import { Settings, Plus } from 'lucide-react'
 
-// Mock data
-const mockMachines = [
-  {
-    id: "1",
-    name: "Torno CNC Setor A - Linha 1",
-    serialNumber: "SN-2024-ABC-12345",
-    manufacturer: "Siemens",
-    model: "CNC-5000X",
-    status: "ACTIVE" as const,
-    clientName: "Indústria Metalúrgica Silva LTDA",
-    deviceNodeId: "HELTEC-A8F3B2",
-  },
-  {
-    id: "2",
-    name: "Fresadora Setor B - Linha 2",
-    serialNumber: "SN-2024-DEF-67890",
-    manufacturer: "Fanuc",
-    model: "MILL-3000",
-    status: "ACTIVE" as const,
-    clientName: "Fábrica de Componentes Tech SA",
-    deviceNodeId: "HELTEC-C4D9E1",
-  },
-  {
-    id: "3",
-    name: "Prensa Hidráulica Setor C",
-    serialNumber: "SN-2023-GHI-11223",
-    manufacturer: "Haas",
-    model: "PRESS-2000H",
-    status: "SUSPENDED" as const,
-    clientName: "Manufatura Industrial Brasil",
-    deviceNodeId: "HELTEC-F7A2C8",
-  },
-]
+// ID do usuário logado (pode vir do contexto futuramente)
+const USER_ID = 1
 
 export default function MachinesListPage() {
   const router = useRouter()
-  const [machines, setMachines] = useState(mockMachines)
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; machine: (typeof mockMachines)[0] | null }>({
+  const [machines, setMachines] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; machine: any | null }>({
     open: false,
     machine: null,
   })
 
-  const handleEdit = (machine: (typeof mockMachines)[0]) => {
+  // Busca os dados da API ao carregar a página
+  useEffect(() => {
+    const fetchMachines = async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/machines/getAll/${USER_ID}`)
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar máquinas: ${response.status}`)
+        }
+        const data = await response.json()
+
+        // Mapeia os dados da API para o formato usado pela tabela
+        const formattedData = data.map((machine: any) => ({
+          id: machine.id,
+          name: machine.name,
+          serialNumber: machine.serialNumber,
+          manufacturer: machine.manufacturer,
+          model: machine.model,
+          status: machine.status,
+          clientName: machine.client?.companyName || '—',
+          deviceNodeId: machine.device?.nodeId || '—',
+        }))
+
+        setMachines(formattedData)
+      } catch (error) {
+        console.error('Erro ao carregar máquinas:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMachines()
+  }, [])
+
+  const handleEdit = (machine: any) => {
     router.push(`/maquinas/${machine.id}/editar`)
   }
 
-  const handleDelete = (machine: (typeof mockMachines)[0]) => {
+  const handleDelete = (machine: any) => {
     setDeleteDialog({ open: true, machine })
   }
 
@@ -66,31 +69,33 @@ export default function MachinesListPage() {
   }
 
   const columns = [
-    { key: "name", label: "Nome da Máquina" },
+    { key: 'name', label: 'Nome da Máquina' },
     {
-      key: "serialNumber",
-      label: "Número de Série",
+      key: 'serialNumber',
+      label: 'Número de Série',
       render: (value: string) => <span className="font-mono text-sm">{value}</span>,
     },
     {
-      key: "manufacturer",
-      label: "Fabricante/Modelo",
-      render: (_: any, row: (typeof mockMachines)[0]) => (
+      key: 'manufacturer',
+      label: 'Fabricante/Modelo',
+      render: (_: any, row: any) => (
         <span className="text-sm">
           {row.manufacturer} {row.model && `- ${row.model}`}
         </span>
       ),
     },
     {
-      key: "status",
-      label: "Status",
-      render: (value: "ACTIVE" | "SUSPENDED" | "CANCELED") => <StatusBadge status={value} />,
+      key: 'status',
+      label: 'Status',
+      render: (value: 'ACTIVE' | 'SUSPENDED' | 'CANCELED') => <StatusBadge status={value} />,
     },
-    { key: "clientName", label: "Cliente" },
+    { key: 'clientName', label: 'Cliente' },
     {
-      key: "deviceNodeId",
-      label: "Dispositivo IoT",
-      render: (value: string) => <span className="font-mono text-xs text-muted-foreground">{value}</span>,
+      key: 'deviceNodeId',
+      label: 'Dispositivo IoT',
+      render: (value: string) => (
+        <span className="font-mono text-xs text-muted-foreground">{value}</span>
+      ),
     },
   ]
 
@@ -109,7 +114,7 @@ export default function MachinesListPage() {
                 <p className="text-xs text-muted-foreground">Gerenciar equipamentos industriais</p>
               </div>
             </div>
-            <Button onClick={() => router.push("/cadastro/maquinas")} className="gap-2">
+            <Button onClick={() => router.push('/cadastro/maquinas')} className="gap-2">
               <Plus className="w-4 h-4" />
               Nova Máquina
             </Button>
@@ -119,16 +124,20 @@ export default function MachinesListPage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <DataTable
-          title={`Total de Máquinas: ${machines.length}`}
-          description="Lista completa de equipamentos industriais cadastrados no sistema"
-          columns={columns}
-          data={machines}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          searchPlaceholder="Buscar por nome, número de série ou cliente..."
-          emptyMessage="Nenhuma máquina cadastrada no sistema"
-        />
+        {loading ? (
+          <p className="text-center text-muted-foreground">Carregando máquinas...</p>
+        ) : (
+          <DataTable
+            title={`Total de Máquinas: ${machines.length}`}
+            description="Lista completa de equipamentos industriais cadastrados no sistema"
+            columns={columns}
+            data={machines}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            searchPlaceholder="Buscar por nome, número de série ou cliente..."
+            emptyMessage="Nenhuma máquina cadastrada no sistema"
+          />
+        )}
       </main>
 
       {/* Delete Confirmation Dialog */}

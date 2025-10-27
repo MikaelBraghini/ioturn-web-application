@@ -1,134 +1,125 @@
-"use client"
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FormFieldWrapper } from "@/components/form-field-wrapper"
-import { StatusBadge } from "@/components/status-badge"
-import { MultiStepForm, type Step } from "@/components/multi-step-form"
-import { Settings, Info } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import axios from 'axios'
+
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { FormFieldWrapper } from '@/components/form-field-wrapper'
+import { StatusBadge } from '@/components/status-badge'
+import { MultiStepForm, type Step } from '@/components/multi-step-form'
+import { Settings, Info } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function MachineRegistrationPage() {
   const router = useRouter()
 
   const [formData, setFormData] = useState({
-    // Machine data
-    name: "",
-    model: "",
-    manufacturer: "",
-    serialNumber: "",
-    status: "ACTIVE" as "ACTIVE" | "SUSPENDED" | "CANCELED",
-    responsibleUserId: "",
-    deviceId: "",
-    deviceGatewayId: "",
+    name: '',
+    model: '',
+    manufacturer: '',
+    serialNumber: '',
+    status: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'CANCELED',
+    responsibleUserId: '',
+    deviceId: '',
+    GatewayId: '',
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const loggedInClient = {
-    id: "current-user-client-id",
-    name: "Indústria Metalúrgica Silva LTDA",
+    id: 1, // Ajuste conforme o ID do cliente logado
+    name: 'Indústria Metalúrgica Silva LTDA',
   }
 
-  // Mock data
-  const mockUsers = [
-    { id: "1", name: "João Silva Santos", type: "TECHNICIAN" },
-    { id: "2", name: "Maria Oliveira Costa", type: "ADMIN" },
-    { id: "3", name: "Carlos Eduardo Lima", type: "TECHNICIAN" },
-  ]
+  const [users, setUsers] = useState<{ id: string; name: string; type: string }[]>([])
+  const [gateways, setGateways] = useState<{ id: string; gatewayId: string; status: string }[]>([])
+  const [availableDevices, setAvailableDevices] = useState<
+    { id: string; nodeId: string; status: string; gatewayId: string }[]
+  >([])
 
-  const mockGateways = [
-    { id: "1", nodeId: "ESP32-GW-001", status: "ACTIVE" },
-    { id: "2", nodeId: "ESP32-GW-002", status: "ACTIVE" },
-    { id: "3", nodeId: "ESP32-GW-003", status: "PROVISIONING" },
-  ]
+  // Buscar usuários, gateways e dispositivos da API
+  useEffect(() => {
+    axios
+      .get(`http://localhost:3000/users/getAll/${loggedInClient.id}`)
+      .then((res) => setUsers(res.data))
+      .catch((err) => console.error('Erro ao buscar usuários:', err))
 
-  const mockAvailableDevices = [
-    { id: "1", nodeId: "HELTEC-A8F3B2", status: "PROVISIONING", gatewayId: "1" },
-    { id: "2", nodeId: "HELTEC-C4D9E1", status: "PROVISIONING", gatewayId: "2" },
-    { id: "3", nodeId: "HELTEC-F7A2C8", status: "PROVISIONING", gatewayId: "3" },
-    { id: "4", nodeId: "HELTEC-D5E6F7", status: "PROVISIONING", gatewayId: "1" },
-  ]
+    axios
+      .get(`http://localhost:3000/gateways/allGateways/${loggedInClient.id}`)
+      .then((res) => setGateways(res.data))
+      .catch((err) => console.error('Erro ao buscar gateways:', err))
+
+    axios
+      .get(`http://localhost:3000/devices/allDevices/${loggedInClient.id}`)
+      .then((res) => setAvailableDevices(res.data))
+      .catch((err) => console.error('Erro ao buscar devices:', err))
+  }, [])
+
+  const selectedDevice = availableDevices.find((d) => d.id === formData.deviceId)
+  const filteredDevices = formData.GatewayId
+    ? availableDevices.filter((d) => d.gatewayId === formData.GatewayId)
+    : availableDevices
 
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {}
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Nome da máquina é obrigatório"
-    }
-
-    if (!formData.serialNumber.trim()) {
-      newErrors.serialNumber = "Número de série é obrigatório"
-    }
-
+    if (!formData.name.trim()) newErrors.name = 'Nome da máquina é obrigatório'
+    if (!formData.serialNumber.trim()) newErrors.serialNumber = 'Número de série é obrigatório'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const validateStep2 = () => {
     const newErrors: Record<string, string> = {}
-
-    if (!formData.responsibleUserId) {
-      newErrors.responsibleUserId = "Usuário responsável é obrigatório"
-    }
-
+    if (!formData.responsibleUserId)
+      newErrors.responsibleUserId = 'Usuário responsável é obrigatório'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const validateStep3 = () => {
-    // No validation needed - gateway and device are optional
-    return true
-  }
+  const validateStep3 = () => true // Dispositivo opcional
 
   const handleComplete = async () => {
-    if (!validateStep3()) {
-      return
-    }
-
+    if (!validateStep3()) return
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    console.log("Máquina e dispositivo vinculados:", {
-      ...formData,
-      clientId: loggedInClient.id,
-    })
-    setIsSubmitting(false)
-
-    router.push("/maquinas")
+    try {
+      const payload = { ...formData, clientId: loggedInClient.id }
+      const response = await axios.post('http://localhost:3000/machines/create', payload)
+      console.log('Máquina criada:', response.data)
+      router.push('/maquinas')
+    } catch (error) {
+      console.error('Erro ao criar máquina:', error)
+      if (axios.isAxiosError(error) && error.response) {
+        alert(error.response.data.error || 'Erro ao criar máquina')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
-
-  const selectedDevice = mockAvailableDevices.find((d) => d.id === formData.deviceId)
-
-  const filteredDevices = formData.deviceGatewayId
-    ? mockAvailableDevices.filter((d) => d.gatewayId === formData.deviceGatewayId)
-    : mockAvailableDevices
 
   const steps: Step[] = [
     {
-      id: "machine-info",
-      title: "Máquina",
-      description: "Informações básicas da máquina industrial",
+      id: 'machine-info',
+      title: 'Máquina',
+      description: 'Informações básicas da máquina industrial',
       validate: validateStep1,
       content: (
         <div className="space-y-4">
-          <FormFieldWrapper
-            label="Nome da Máquina"
-            htmlFor="name"
-            required
-            description="Identificação do equipamento"
-            error={errors.name}
-          >
+          <FormFieldWrapper label="Nome da Máquina" htmlFor="name" required error={errors.name}>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Ex: Torno CNC Setor A"
-              className="bg-input border-border"
             />
           </FormFieldWrapper>
 
@@ -136,7 +127,6 @@ export default function MachineRegistrationPage() {
             label="Número de Série"
             htmlFor="serialNumber"
             required
-            description="Número único do fabricante"
             error={errors.serialNumber}
           >
             <Input
@@ -144,40 +134,37 @@ export default function MachineRegistrationPage() {
               value={formData.serialNumber}
               onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
               placeholder="Ex: SN-2024-ABC-12345"
-              className="bg-input border-border font-mono"
             />
           </FormFieldWrapper>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormFieldWrapper label="Fabricante" htmlFor="manufacturer" description="Nome do fabricante">
+            <FormFieldWrapper label="Fabricante" htmlFor="manufacturer">
               <Input
                 id="manufacturer"
                 value={formData.manufacturer}
                 onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
                 placeholder="Ex: Siemens"
-                className="bg-input border-border"
               />
             </FormFieldWrapper>
 
-            <FormFieldWrapper label="Modelo" htmlFor="model" description="Modelo do equipamento">
+            <FormFieldWrapper label="Modelo" htmlFor="model">
               <Input
                 id="model"
                 value={formData.model}
                 onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                 placeholder="Ex: CNC-5000X"
-                className="bg-input border-border"
               />
             </FormFieldWrapper>
           </div>
 
-          <FormFieldWrapper label="Status" htmlFor="status" required description="Situação operacional">
+          <FormFieldWrapper label="Status" htmlFor="status">
             <Select
               value={formData.status}
-              onValueChange={(value: "ACTIVE" | "SUSPENDED" | "CANCELED") =>
+              onValueChange={(value: 'ACTIVE' | 'SUSPENDED' | 'CANCELED') =>
                 setFormData({ ...formData, status: value })
               }
             >
-              <SelectTrigger id="status" className="bg-input border-border">
+              <SelectTrigger id="status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -191,9 +178,9 @@ export default function MachineRegistrationPage() {
       ),
     },
     {
-      id: "assignment",
-      title: "Vinculação",
-      description: "Associe a máquina ao usuário responsável",
+      id: 'assignment',
+      title: 'Vinculação',
+      description: 'Associe a máquina ao usuário responsável',
       validate: validateStep2,
       content: (
         <div className="space-y-4">
@@ -212,18 +199,17 @@ export default function MachineRegistrationPage() {
             label="Usuário Responsável"
             htmlFor="responsibleUserId"
             required
-            description="Técnico ou administrador que gerenciará esta máquina"
             error={errors.responsibleUserId}
           >
             <Select
               value={formData.responsibleUserId}
               onValueChange={(value) => setFormData({ ...formData, responsibleUserId: value })}
             >
-              <SelectTrigger id="responsibleUserId" className="bg-input border-border">
+              <SelectTrigger id="responsibleUserId">
                 <SelectValue placeholder="Selecione um usuário" />
               </SelectTrigger>
               <SelectContent>
-                {mockUsers.map((user) => (
+                {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     <div className="flex items-center gap-2">
                       <span>{user.name}</span>
@@ -238,33 +224,32 @@ export default function MachineRegistrationPage() {
       ),
     },
     {
-      id: "device",
-      title: "Dispositivo IoT",
-      description: "Vincule um sensor disponível à máquina (opcional)",
+      id: 'device',
+      title: 'Dispositivo IoT',
+      description: 'Vincule um sensor disponível à máquina (opcional)',
       validate: validateStep3,
       content: (
         <div className="space-y-4">
           <FormFieldWrapper
             label="Gateway Responsável"
-            htmlFor="deviceGatewayId"
-            description="Gateway ESP32 que gerenciará este sensor (opcional)"
-            error={errors.deviceGatewayId}
+            htmlFor="GatewayId"
+            error={errors.GatewayId}
           >
             <Select
-              value={formData.deviceGatewayId}
-              onValueChange={(value) => {
-                setFormData({ ...formData, deviceGatewayId: value, deviceId: "" })
-              }}
+              value={formData.GatewayId}
+              onValueChange={(value) =>
+                setFormData({ ...formData, GatewayId: value, deviceId: '' })
+              }
             >
-              <SelectTrigger id="deviceGatewayId" className="bg-input border-border">
+              <SelectTrigger id="GatewayId">
                 <SelectValue placeholder="Selecione um gateway" />
               </SelectTrigger>
               <SelectContent>
-                {mockGateways.map((gateway) => (
+                {gateways.map((gateway) => (
                   <SelectItem key={gateway.id} value={gateway.id}>
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-sm">{gateway.nodeId}</span>
-                      <StatusBadge status={gateway.status as "ACTIVE"} />
+                      <span className="font-mono text-sm">{gateway.gatewayId}</span>
+                      <StatusBadge status={gateway.status as 'ACTIVE'} />
                     </div>
                   </SelectItem>
                 ))}
@@ -272,29 +257,28 @@ export default function MachineRegistrationPage() {
             </Select>
           </FormFieldWrapper>
 
-          <FormFieldWrapper
-            label="Dispositivo IoT"
-            htmlFor="deviceId"
-            description="Selecione um sensor Heltec V2 disponível para vinculação (opcional)"
-            error={errors.deviceId}
-          >
+          <FormFieldWrapper label="Dispositivo IoT" htmlFor="deviceId" error={errors.deviceId}>
             <Select
               value={formData.deviceId}
               onValueChange={(value) => setFormData({ ...formData, deviceId: value })}
-              disabled={!formData.deviceGatewayId}
+              disabled={!formData.GatewayId}
             >
-              <SelectTrigger id="deviceId" className="bg-input border-border">
+              <SelectTrigger id="deviceId">
                 <SelectValue
-                  placeholder={formData.deviceGatewayId ? "Selecione um dispositivo" : "Selecione um gateway primeiro"}
+                  placeholder={
+                    formData.GatewayId
+                      ? 'Selecione um dispositivo'
+                      : 'Selecione um gateway primeiro'
+                  }
                 />
               </SelectTrigger>
               <SelectContent>
-                {filteredDevices.length > 0 ? (
-                  filteredDevices.map((device) => (
+                {availableDevices.length > 0 ? (
+                  availableDevices.map((device) => (
                     <SelectItem key={device.id} value={device.id}>
                       <div className="flex items-center gap-3">
                         <span className="font-mono text-sm">{device.nodeId}</span>
-                        <StatusBadge status={device.status as "PROVISIONING"} />
+                        <StatusBadge status={device.status as 'PROVISIONING'} />
                       </div>
                     </SelectItem>
                   ))
@@ -315,11 +299,12 @@ export default function MachineRegistrationPage() {
                   <h4 className="font-semibold text-sm text-foreground">Dispositivo Selecionado</h4>
                   <div className="space-y-1 text-sm text-muted-foreground">
                     <p>
-                      <span className="font-semibold text-foreground">Node ID:</span>{" "}
+                      <span className="font-semibold text-foreground">Node ID:</span>{' '}
                       <span className="font-mono">{selectedDevice.nodeId}</span>
                     </p>
                     <p>
-                      <span className="font-semibold text-foreground">Status:</span> Pronto para vinculação
+                      <span className="font-semibold text-foreground">Status:</span> Pronto para
+                      vinculação
                     </p>
                   </div>
                 </div>
@@ -330,8 +315,8 @@ export default function MachineRegistrationPage() {
           <div className="p-4 bg-muted/50 rounded-lg border border-border">
             <p className="text-sm text-muted-foreground">
               {formData.deviceId
-                ? "O dispositivo selecionado será vinculado automaticamente a esta máquina. Ele começará a coletar dados de RPM, temperatura do óleo, nível de óleo e corrente elétrica após a ativação."
-                : "Você pode vincular um dispositivo IoT agora ou fazer isso posteriormente através da edição da máquina. A máquina será criada sem monitoramento até que um dispositivo seja vinculado."}
+                ? 'O dispositivo selecionado será vinculado automaticamente a esta máquina.'
+                : 'Você pode vincular um dispositivo IoT agora ou fazer isso posteriormente.'}
             </p>
           </div>
         </div>
@@ -349,13 +334,15 @@ export default function MachineRegistrationPage() {
             </div>
             <h1 className="text-2xl font-semibold text-foreground">Cadastro de Máquina</h1>
           </div>
-          <p className="text-sm text-muted-foreground">Registre uma nova máquina e vincule um dispositivo IoT</p>
+          <p className="text-sm text-muted-foreground">
+            Registre uma nova máquina e vincule um dispositivo IoT
+          </p>
         </div>
 
         <MultiStepForm
           steps={steps}
           onComplete={handleComplete}
-          onCancel={() => router.push("/maquinas")}
+          onCancel={() => router.push('/maquinas')}
           isSubmitting={isSubmitting}
         />
       </div>

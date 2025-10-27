@@ -1,84 +1,110 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useState } from "react"
-import { useRouter, useParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FormFieldWrapper } from "@/components/form-field-wrapper"
-import { FormSection } from "@/components/form-section"
-import { StatusBadge } from "@/components/status-badge"
-import { Settings, Save, X, ArrowLeft } from "lucide-react"
-
-// Mock data
-const mockMachine = {
-  id: "1",
-  name: "Torno CNC Setor A - Linha 1",
-  model: "CNC-5000X",
-  manufacturer: "Siemens",
-  serialNumber: "SN-2024-ABC-12345",
-  status: "ACTIVE" as "ACTIVE" | "SUSPENDED" | "CANCELED",
-  gatewayId: "1",
-  responsibleUserId: "1",
-  deviceId: "1",
-}
-
-const mockGateways = [
-  { id: "1", gatewayId: "GW-001-ALPHA", status: "ONLINE" },
-  { id: "2", gatewayId: "GW-002-BETA", status: "ONLINE" },
-  { id: "3", gatewayId: "GW-003-GAMMA", status: "OFFLINE" },
-]
-
-const mockUsers = [
-  { id: "1", name: "João Silva Santos", type: "TECHNICIAN" },
-  { id: "2", name: "Maria Oliveira Costa", type: "ADMIN" },
-]
-
-const mockDevices = [
-  { id: "1", nodeId: "HELTEC-A8F3B2", status: "ONLINE" },
-  { id: "2", nodeId: "HELTEC-C4D9E1", status: "PROVISIONING" },
-]
+import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { FormFieldWrapper } from '@/components/form-field-wrapper'
+import { FormSection } from '@/components/form-section'
+import { StatusBadge } from '@/components/status-badge'
+import { Settings, Save, X, ArrowLeft } from 'lucide-react'
 
 export default function EditMachinePage() {
   const router = useRouter()
-  const params = useParams()
-  const [formData, setFormData] = useState(mockMachine)
+  const { id } = useParams() as { id: string }
+
+  const [formData, setFormData] = useState<any>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
+  const [gateways, setGateways] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [devices, setDevices] = useState<any[]>([])
+
+  // Busca inicial: dados da máquina + listas relacionadas
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [machineRes, gatewayRes, usersRes, devicesRes] = await Promise.all([
+          fetch(`http://localhost:3000/machines/getAll/${id}`),
+          fetch('http://localhost:3000/gateways'),
+          fetch('http://localhost:3000/users'),
+          fetch('http://localhost:3000/devices'),
+        ])
+
+        const [machine, gatewaysData, usersData, devicesData] = await Promise.all([
+          machineRes.json(),
+          gatewayRes.json(),
+          usersRes.json(),
+          devicesRes.json(),
+        ])
+
+        setFormData(machine)
+        setGateways(gatewaysData)
+        setUsers(usersData)
+        setDevices(devicesData)
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [id])
+
+  // Validação simples
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Nome da máquina é obrigatório"
-    }
-
-    if (!formData.serialNumber.trim()) {
-      newErrors.serialNumber = "Número de série é obrigatório"
-    }
-
-    if (!formData.responsibleUserId) {
-      newErrors.responsibleUserId = "Usuário responsável é obrigatório"
-    }
+    if (!formData.name?.trim()) newErrors.name = 'Nome da máquina é obrigatório'
+    if (!formData.serialNumber?.trim()) newErrors.serialNumber = 'Número de série é obrigatório'
+    if (!formData.responsibleUserId)
+      newErrors.responsibleUserId = 'Usuário responsável é obrigatório'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
+  // Submissão (PUT)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
+    if (!validateForm()) return
 
     setIsSubmitting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    console.log("Máquina atualizada:", formData)
-    setIsSubmitting(false)
-    router.push("/maquinas")
+    try {
+      const res = await fetch(`http://localhost:3000/machines/update/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+
+      if (!res.ok) throw new Error('Erro ao atualizar máquina')
+
+      router.push('/maquinas')
+    } catch (error) {
+      console.error(error)
+      alert('Erro ao atualizar máquina.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (isLoading || !formData) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        Carregando informações da máquina...
+      </div>
+    )
   }
 
   return (
@@ -86,7 +112,7 @@ export default function EditMachinePage() {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.push("/maquinas")}>
+          <Button variant="outline" size="icon" onClick={() => router.push('/maquinas')}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
@@ -98,29 +124,31 @@ export default function EditMachinePage() {
           </div>
         </div>
 
-        {/* Form Card */}
+        {/* Form */}
         <Card className="border-border shadow-lg">
           <CardHeader className="border-b border-border bg-card/50">
             <CardTitle className="flex items-center gap-2">
               <span>Informações da Máquina</span>
               <StatusBadge status={formData.status} />
             </CardTitle>
-            <CardDescription>Preencha todos os campos obrigatórios marcados com asterisco (*)</CardDescription>
+            <CardDescription>
+              Preencha todos os campos obrigatórios marcados com asterisco (*)
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Identificação da Máquina */}
+              {/* Identificação */}
               <FormSection
                 title="Identificação da Máquina"
-                description="Informações básicas para identificação do equipamento industrial"
+                description="Informações básicas do equipamento"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormFieldWrapper
                     label="Nome da Máquina"
                     htmlFor="name"
                     required
-                    description="Nome ou identificação interna do equipamento"
+                    description="Nome ou identificação interna"
                     error={errors.name}
                     className="md:col-span-2"
                   >
@@ -128,8 +156,6 @@ export default function EditMachinePage() {
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Ex: Torno CNC Setor A - Linha 1"
-                      className="bg-input border-border"
                     />
                   </FormFieldWrapper>
 
@@ -137,15 +163,13 @@ export default function EditMachinePage() {
                     label="Número de Série"
                     htmlFor="serialNumber"
                     required
-                    description="Número de série único do fabricante"
+                    description="Número de série do fabricante"
                     error={errors.serialNumber}
                   >
                     <Input
                       id="serialNumber"
                       value={formData.serialNumber}
                       onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-                      placeholder="Ex: SN-2024-ABC-12345"
-                      className="bg-input border-border font-mono"
                     />
                   </FormFieldWrapper>
 
@@ -153,15 +177,18 @@ export default function EditMachinePage() {
                     label="Status"
                     htmlFor="status"
                     required
-                    description="Situação operacional da máquina"
+                    description="Situação operacional"
                   >
                     <Select
                       value={formData.status}
-                      onValueChange={(value: "ACTIVE" | "SUSPENDED" | "CANCELED") =>
-                        setFormData({ ...formData, status: value })
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          status: value as 'ACTIVE' | 'SUSPENDED' | 'CANCELED',
+                        })
                       }
                     >
-                      <SelectTrigger id="status" className="bg-input border-border">
+                      <SelectTrigger id="status">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -174,64 +201,50 @@ export default function EditMachinePage() {
                 </div>
               </FormSection>
 
-              {/* Especificações Técnicas */}
+              {/* Especificações */}
               <FormSection
                 title="Especificações Técnicas"
-                description="Detalhes técnicos do fabricante (opcional, mas recomendado)"
+                description="Detalhes técnicos do fabricante"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormFieldWrapper
-                    label="Fabricante"
-                    htmlFor="manufacturer"
-                    description="Nome do fabricante do equipamento"
-                  >
+                  <FormFieldWrapper label="Fabricante" htmlFor="manufacturer">
                     <Input
                       id="manufacturer"
-                      value={formData.manufacturer}
+                      value={formData.manufacturer || ''}
                       onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-                      placeholder="Ex: Siemens, Fanuc, Haas"
-                      className="bg-input border-border"
                     />
                   </FormFieldWrapper>
 
-                  <FormFieldWrapper label="Modelo" htmlFor="model" description="Modelo ou código do equipamento">
+                  <FormFieldWrapper label="Modelo" htmlFor="model">
                     <Input
                       id="model"
-                      value={formData.model}
+                      value={formData.model || ''}
                       onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                      placeholder="Ex: CNC-5000X"
-                      className="bg-input border-border"
                     />
                   </FormFieldWrapper>
                 </div>
               </FormSection>
 
-              {/* Vinculação e Responsabilidade */}
+              {/* Vinculação */}
               <FormSection
                 title="Vinculação e Responsabilidade"
-                description="Associe a máquina ao gateway, dispositivo IoT e usuário responsável"
+                description="Associações IoT e responsáveis"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormFieldWrapper
-                    label="Gateway"
-                    htmlFor="gatewayId"
-                    description="Gateway de comunicação IoT (opcional)"
-                    error={errors.gatewayId}
-                  >
+                  <FormFieldWrapper label="Gateway" htmlFor="gatewayId">
                     <Select
-                      value={formData.gatewayId}
-                      onValueChange={(value) => setFormData({ ...formData, gatewayId: value })}
+                      value={formData.gatewayId?.toString() || ''}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, gatewayId: Number(value) })
+                      }
                     >
-                      <SelectTrigger id="gatewayId" className="bg-input border-border">
+                      <SelectTrigger id="gatewayId">
                         <SelectValue placeholder="Selecione um gateway" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockGateways.map((gateway) => (
-                          <SelectItem key={gateway.id} value={gateway.id}>
-                            <div className="flex items-center gap-3">
-                              <span className="font-mono text-sm">{gateway.gatewayId}</span>
-                              <StatusBadge status={gateway.status as "ONLINE" | "OFFLINE"} />
-                            </div>
+                        {gateways.map((g) => (
+                          <SelectItem key={g.id} value={g.id.toString()}>
+                            {g.gatewayId}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -242,23 +255,20 @@ export default function EditMachinePage() {
                     label="Usuário Responsável"
                     htmlFor="responsibleUserId"
                     required
-                    description="Técnico ou administrador responsável"
-                    error={errors.responsibleUserId}
                   >
                     <Select
-                      value={formData.responsibleUserId}
-                      onValueChange={(value) => setFormData({ ...formData, responsibleUserId: value })}
+                      value={formData.responsibleUserId?.toString() || ''}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, responsibleUserId: Number(value) })
+                      }
                     >
-                      <SelectTrigger id="responsibleUserId" className="bg-input border-border">
+                      <SelectTrigger id="responsibleUserId">
                         <SelectValue placeholder="Selecione um usuário" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            <div className="flex items-center gap-2">
-                              <span>{user.name}</span>
-                              <span className="text-xs text-muted-foreground">({user.type})</span>
-                            </div>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id.toString()}>
+                            {u.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -268,24 +278,21 @@ export default function EditMachinePage() {
                   <FormFieldWrapper
                     label="Dispositivo IoT"
                     htmlFor="deviceId"
-                    description="Sensor Heltec V2 vinculado à máquina (opcional)"
-                    error={errors.deviceId}
                     className="md:col-span-2"
                   >
                     <Select
-                      value={formData.deviceId}
-                      onValueChange={(value) => setFormData({ ...formData, deviceId: value })}
+                      value={formData.deviceId?.toString() || ''}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, deviceId: Number(value) })
+                      }
                     >
-                      <SelectTrigger id="deviceId" className="bg-input border-border">
-                        <SelectValue placeholder="Selecione um dispositivo disponível" />
+                      <SelectTrigger id="deviceId">
+                        <SelectValue placeholder="Selecione um dispositivo" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockDevices.map((device) => (
-                          <SelectItem key={device.id} value={device.id}>
-                            <div className="flex items-center gap-3">
-                              <span className="font-mono text-sm">{device.nodeId}</span>
-                              <StatusBadge status={device.status as "ONLINE" | "PROVISIONING"} />
-                            </div>
+                        {devices.map((d) => (
+                          <SelectItem key={d.id} value={d.id.toString()}>
+                            {d.nodeId}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -294,23 +301,22 @@ export default function EditMachinePage() {
                 </div>
               </FormSection>
 
-              {/* Action Buttons */}
+              {/* Ações */}
               <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.push("/maquinas")}
+                  onClick={() => router.push('/maquinas')}
                   disabled={isSubmitting}
-                  className="gap-2"
                 >
                   <X className="w-4 h-4" />
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="gap-2 min-w-[180px]">
+                <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <span className="inline-block w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      Salvando Alterações...
+                      Salvando...
                     </>
                   ) : (
                     <>
