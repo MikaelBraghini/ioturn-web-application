@@ -16,6 +16,7 @@ import { FormFieldWrapper } from '@/components/form-field-wrapper'
 import { FormSection } from '@/components/form-section'
 import { StatusBadge } from '@/components/status-badge'
 import { Settings, Save, X, ArrowLeft } from 'lucide-react'
+import axios from 'axios'
 
 export default function EditMachinePage() {
   const router = useRouter()
@@ -26,32 +27,28 @@ export default function EditMachinePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
-  const [gateways, setGateways] = useState<any[]>([])
-  const [users, setUsers] = useState<any[]>([])
-  const [devices, setDevices] = useState<any[]>([])
-
-  // Busca inicial: dados da máquina + listas relacionadas
+  // Busca inicial: dados da máquina
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchMachine = async () => {
       try {
-        const [machineRes, gatewayRes, usersRes, devicesRes] = await Promise.all([
-          fetch(`http://localhost:3000/machines/getAll/${id}`),
-          fetch('http://localhost:3000/gateways'),
-          fetch('http://localhost:3000/users'),
-          fetch('http://localhost:3000/devices'),
-        ])
+        const res = await fetch(`http://localhost:3000/machines/getMachine/1/${id}`)
+        const machine = await res.json()
 
-        const [machine, gatewaysData, usersData, devicesData] = await Promise.all([
-          machineRes.json(),
-          gatewayRes.json(),
-          usersRes.json(),
-          devicesRes.json(),
-        ])
-
-        setFormData(machine)
-        setGateways(gatewaysData)
-        setUsers(usersData)
-        setDevices(devicesData)
+        setFormData({
+          id: machine.id,
+          name: machine.name,
+          model: machine.model,
+          manufacturer: machine.manufacturer,
+          serialNumber: machine.serialNumber,
+          status: machine.status,
+          responsibleUserId: machine.responsibleUser?.id || null,
+          deviceId: machine.device?.id || null,
+          gatewayId: machine.device?.gateway?.id || null,
+          clientId: machine.client?.id || null,
+          responsibleUser: machine.responsibleUser || null,
+          device: machine.device || null,
+          gateway: machine.device?.gateway || null,
+        })
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
       } finally {
@@ -59,7 +56,7 @@ export default function EditMachinePage() {
       }
     }
 
-    fetchData()
+    fetchMachine()
   }, [id])
 
   // Validação simples
@@ -74,21 +71,16 @@ export default function EditMachinePage() {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
-
-  // Submissão (PUT)
+  // Submissão (PUT) usando Axios e userId fixo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
 
     setIsSubmitting(true)
     try {
-      const res = await fetch(`http://localhost:3000/machines/update/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      })
+      const res = await axios.put(`http://localhost:3000/machines/update/${formData.id}`, formData)
 
-      if (!res.ok) throw new Error('Erro ao atualizar máquina')
+      if (res.status !== 200) throw new Error('Erro ao atualizar máquina')
 
       router.push('/maquinas')
     } catch (error) {
@@ -242,11 +234,11 @@ export default function EditMachinePage() {
                         <SelectValue placeholder="Selecione um gateway" />
                       </SelectTrigger>
                       <SelectContent>
-                        {gateways.map((g) => (
-                          <SelectItem key={g.id} value={g.id.toString()}>
-                            {g.gatewayId}
+                        {formData.gateway && (
+                          <SelectItem value={formData.gateway.id.toString()}>
+                            {formData.gateway.gatewayId}
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                   </FormFieldWrapper>
@@ -266,11 +258,11 @@ export default function EditMachinePage() {
                         <SelectValue placeholder="Selecione um usuário" />
                       </SelectTrigger>
                       <SelectContent>
-                        {users.map((u) => (
-                          <SelectItem key={u.id} value={u.id.toString()}>
-                            {u.name}
+                        {formData.responsibleUser && (
+                          <SelectItem value={formData.responsibleUser.id.toString()}>
+                            {formData.responsibleUser.name}
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                   </FormFieldWrapper>
@@ -290,11 +282,11 @@ export default function EditMachinePage() {
                         <SelectValue placeholder="Selecione um dispositivo" />
                       </SelectTrigger>
                       <SelectContent>
-                        {devices.map((d) => (
-                          <SelectItem key={d.id} value={d.id.toString()}>
-                            {d.nodeId}
+                        {formData.device && (
+                          <SelectItem value={formData.device.id.toString()}>
+                            {formData.device.nodeId}
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                   </FormFieldWrapper>
