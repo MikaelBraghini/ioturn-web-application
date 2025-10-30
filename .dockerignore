@@ -1,0 +1,12 @@
+# Dependências locais
+node_modules
+
+# Pasta de build do Next.js
+.next
+
+# Arquivos do Docker
+Dockerfile
+.dockerignore
+
+# Arquivos de log do npm
+npm-debug.log
